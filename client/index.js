@@ -1,73 +1,4 @@
-let toDos = [ 
-            /*{
-                category: "General",
-                toDoList: [
-                    {
-                        id: 2756,
-                        name: "get cards",
-                        done: false
-                    },
-                    {
-                        id: 1745,
-                        name: "go to work",
-                        done: false
-                    },
-                    {
-                        id: 9784,
-                        name: "play tarkov",
-                        done: false
-                    },
-                ]
-            },
-            {
-                category: "School",
-                toDoList: [
-                    {
-                        id: 5678,
-                        name: "swag",
-                        done: false
-                    },
-                    {
-                        id: 3462,
-                        name: "steeeze",
-                        done: false
-                    },
-                    {
-                        id: 7846,
-                        name: "cool",
-                        done: false
-                    },
-                ]
-            },
-            {
-                category: "Chores",
-                toDoList: [
-                    {
-                        id: 0,
-                        name: "dishes",
-                        done: false
-                    },
-                    {
-                        id: 1,
-                        name: "clothes",
-                        done: false
-                    },
-                    {
-                        id: 2,
-                        name: "cleaning",
-                        done: false
-                    },
-                ]
-            },*/
-]
-// got this function from MDN docs
-function getRandomInt(min, max) {
-    min = Math.ceil(min)
-    max = Math.floor(max)
-    return Math.floor(Math.random() * (max - min) + min) // The maximum is exclusive and the minimum is inclusive
-  }
-  
-
+/*
 function pendingItems(arr) {
     const alertText = document.querySelector(".alert")
     let count = 0
@@ -92,6 +23,12 @@ function setDoneItem(elem,arr) {
         }
     }
     pendingItems(toDos)
+}*/
+
+async function getToDos() {
+    const response = await fetch('http://127.0.0.1:8000/sendToDo')
+    const data = await response.json('/')
+    return data
 }
 
 function showToDo(arr) {
@@ -137,7 +74,7 @@ function showToDo(arr) {
             const editBtn = document.createElement("span")
             editBtn.classList.add("editBtn")
             editBtn.id = arr[i].toDoList[item].id
-            editBtn.setAttribute("onclick","editToDo(this,toDos);")
+            editBtn.setAttribute("onclick","editToDo(this);")
             const editIcon = document.createElement("i")
             editIcon.classList.add("fa", "fa-edit")
             editBtn.appendChild(editIcon)
@@ -160,34 +97,33 @@ function showToDo(arr) {
         }
         list.appendChild(categoryList)
     } 
-    pendingItems(toDos)
 }
 
-function addToDo(arr) {
+function addToDo() {
     const list = document.querySelector(".listWrapper")
-    const inputField = document.querySelector(".newToDo")
+    let inputField = document.querySelector(".newToDo")
     let checkedRadio = document.querySelector("input:checked").id
 
-    for (i = 0; i < arr.length; i ++) {
-        if (checkedRadio == arr[i].category) {
-            arr[i].toDoList.push({
-                id: getRandomInt(1,9999),
-                name: `${inputField.value}`,
-                done: false
-            })
-        } 
-    }
-        
-    
+    fetch('http://127.0.0.1:8000/addToDo',{
+        method: 'POST',
+        body: JSON.stringify({
+            category: `${checkedRadio}`,
+            toDo: `${inputField.value}`
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(res => res.json())
+    .then(toDos => showToDo(toDos))
+   
     inputField.value = ""
     inputField.setAttribute("placeholder","Enter new task")
         
     radioDiv.innerHTML = ""
-    list.innerHTML = ""
-    showToDo(toDos)
 }
 
-function editToDo(elem,arr) {
+function editToDo(elem) {
     const wrapper = document.querySelector(".inputField")
     const addInput = document.querySelector(".newToDo")
     const addBtn = document.querySelector(".addBtn")
@@ -197,17 +133,16 @@ function editToDo(elem,arr) {
     const editInput = document.createElement("input")
     editInput.classList.add("editInput")
     editInput.setAttribute("type","text")
-    for (i = 0; i < arr.length; i++) {
-        for (const category of arr[i].toDoList) {
-            if (elem.id == category.id) {
-                editInput.setAttribute("placeholder",`${category.name}`)
-            }
-        }      
-    }
+
+    fetch(`http://127.0.0.1:8000/editToDo/${elem.id}`)
+    .then(res => res.json())
+    .then(data => {
+        editInput.setAttribute("placeholder",`${data}`)
+    })
 
     const editBtn = document.createElement("button")
     editBtn.setAttribute("type","button")
-    editBtn.setAttribute("onclick","finishEdit(toDos);")
+    editBtn.setAttribute("onclick","finishEdit();")
 
     const icon = document.createElement("i")
     icon.classList.add("fas","fa-edit")
@@ -217,43 +152,48 @@ function editToDo(elem,arr) {
     wrapper.appendChild(editBtn)
 }
 
-function finishEdit(arr) {
+function finishEdit() {
     const newInput = document.querySelector(".editInput")
 
-    for (i = 0; i < arr.length; i ++) {
-        for (const category of arr[i].toDoList) {
-            if (category.name == newInput.placeholder) {
-                category.name = newInput.value
-            } 
+    fetch('http://127.0.0.1:8000/editToDo/',{
+        method: 'PUT',
+        body: JSON.stringify({
+            placeholder: `${newInput.placeholder}`,
+            value: `${newInput.value}`
+        }),
+        headers: {
+            'Content-Type': 'application/json',
         }
-    }
+    })
+    .then(res => res.json())
+    .then(toDos => {
+        const wrapper = document.querySelector(".inputField")
+        const editInput = document.querySelector("input")
+        const editBtn = document.querySelector("button")
+        editInput.remove();
+        editBtn.remove();
 
-    const wrapper = document.querySelector(".inputField")
-    const editInput = document.querySelector("input")
-    const editBtn = document.querySelector("button")
-    editInput.remove();
-    editBtn.remove();
+        const addInput = document.createElement("input")
+        addInput.setAttribute("type","text")
+        addInput.setAttribute("placeholder","Enter new task")
+        addInput.classList.add("newToDo")
 
-    const addInput = document.createElement("input")
-    addInput.setAttribute("type","text")
-    addInput.setAttribute("placeholder","Enter new task")
-    addInput.classList.add("newToDo")
+        const addBtn = document.createElement("button")
+        addBtn.setAttribute("type","button")
+        addBtn.setAttribute("onclick","addToDo(toDos);")
+        addBtn.classList.add("addBtn")
 
-    const addBtn = document.createElement("button")
-    addBtn.setAttribute("type","button")
-    addBtn.setAttribute("onclick","addToDo(toDos);")
-    addBtn.classList.add("addBtn")
+        const icon = document.createElement("i")
+        icon.classList.add("fas","fa-plus")
 
-    const icon = document.createElement("i")
-    icon.classList.add("fas","fa-plus")
+        addBtn.appendChild(icon)
+        wrapper.appendChild(addInput)
+        wrapper.appendChild(addBtn)
 
-    addBtn.appendChild(icon)
-    wrapper.appendChild(addInput)
-    wrapper.appendChild(addBtn)
-
-    showToDo(toDos)
+        showToDo(toDos)
+    })
 }
-
+/*
 function deleteToDo(elem,arr) {
     for (i = 0; i < arr.length; i++) {
         for (const category of arr[i].toDoList) {
@@ -277,17 +217,27 @@ function clearDoneItems(arr) {
     }
     showToDo(toDos)
 }
+*/
 
-function addCategory(arr) {
-    const addCategoryInput = document.querySelector(".newCategory")
-    arr.push({
+function addCategory() {
+    const addCategoryInput = document.querySelector(".newCategory").value
+    fetch('http://127.0.0.1:8000/addCategory',{
+        method: 'POST',
+        body: JSON.stringify({category: `${addCategoryInput}`}),
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(res => res.json())
+    .then(toDos => showToDo(toDos))
+    /*arr.push({
         category: `${addCategoryInput.value}`,
         toDoList: []
-    })
+    })*/
     addCategoryInput.value = ""
-    showToDo(toDos)
+    
 }
-
+/*
 function deleteCategory(arr,elem) {
     for (i = 0; i < arr.length; i++) {
         if (arr[i].category == elem.id) {
@@ -345,6 +295,7 @@ function finishCategoryEdit(arr) {
     wrapper.insertAdjacentHTML("afterbegin",editCategoryMarkup)
 
     showToDo(toDos)
-}
-
-showToDo(toDos)
+}*/
+getToDos().then(toDos => {
+    showToDo(toDos)
+})
