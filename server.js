@@ -11,7 +11,7 @@ app.use(bodyParser.urlencoded({
 }))
 const port = 8000
 
-let toDos = [ 
+let toDos = [/* 
   {
       category: "General",
       toDoList: [
@@ -71,7 +71,7 @@ let toDos = [
               done: false
           },
       ]
-  },
+  },*/
 ]
 
 function getRandomInt(min, max) {
@@ -137,6 +137,96 @@ app.put('/editToDo/', (req, res) => {
     }
 
 
+
+    res.send(toDos)
+})
+
+app.delete('/deleteToDo/:toDoID', (req, res) => {
+    const ID = req.params.toDoID
+
+    for (i = 0; i < toDos.length; i++) {
+        for (const toDo of toDos[i].toDoList) {
+            if (toDo.id == ID) {
+                toDos[i].toDoList.splice(toDos[i].toDoList.indexOf(toDo), 1)
+            }
+        }
+    }
+
+    res.send(toDos)
+})
+
+app.get('/pendingToDo', (req, res) => {
+    let counter = 0
+
+    for (i = 0; i < toDos.length; i ++) {
+        for (const toDo of toDos[i].toDoList) {
+            if (toDo.done == false) {
+                counter += 1
+            }
+        }
+    }
+
+    res.send({counter})
+})
+
+app.put('/setDone/', (req, res) => {
+    const ID = req.body.toDoID
+
+    for (i = 0; i < toDos.length; i++) {
+        for (const toDo of toDos[i].toDoList) {
+            if (ID == toDo.id) {
+                toDo.done = true
+            }
+        }
+    }
+
+    res.send(toDos)
+})
+
+app.get('/deleteDoneToDos', (req, res) => {
+    for (i = 0; i < toDos.length; i++) {
+        j = toDos[i].toDoList.length
+        while (j--) {
+            if (toDos[i].toDoList[j].done == true) {
+                toDos[i].toDoList.splice(toDos[i].toDoList[j], 1)
+            }
+        } 
+    }
+
+    res.send(toDos)
+})
+
+app.delete('/deleteCategory/:toDoID', (req, res) => {
+    const ID = req.params.toDoID
+
+    for (i = 0; i < toDos.length; i++) {
+        if (toDos[i].category == ID) {
+            toDos.splice(i, 1)
+        }
+    }
+
+    res.send(toDos)
+})
+
+app.get('/editCategory/:toDoID', (req, res) => {
+    const ID = req.params.toDoID
+
+    for (i = 0; i < toDos.length; i++) {
+        if (toDos[i].category == ID) {
+            res.send(JSON.stringify(toDos[i].category))
+        }
+    }
+})
+
+app.put('/editCategory/', (req, res) => {
+    const placeholder = req.body.placeholder
+    const value = req.body.value
+
+    for (i = 0; i < toDos.length; i ++) {
+        if (toDos[i].category == placeholder) {
+            toDos[i].category = value
+        } 
+    }
 
     res.send(toDos)
 })

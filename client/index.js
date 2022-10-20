@@ -1,33 +1,40 @@
-/*
-function pendingItems(arr) {
+async function getPendingItems() {
+    const response = await fetch('http://127.0.0.1:8000/pendingToDo')
+    const data = await response.json()
+    return data
+}
+function pendingItems() {
     const alertText = document.querySelector(".alert")
     let count = 0
-    for (i = 0; i < arr.length; i ++) {
-        for (const category of arr[i].toDoList) {
-            if (category.done == false) {
-                count += 1
-            }
-        }
-    }
 
-    alertText.textContent = `You have ${count} pending tasks.`
+    getPendingItems().then(res => {
+        count = res.counter
+        alertText.textContent = `You have ${count} pending tasks.`
+    })
 }
 
-function setDoneItem(elem,arr) {
-     elem.classList.add("done")
-     for (i = 0; i < arr.length; i++) {
-        for (const category of arr[i].toDoList) {
-            if (elem.id == category.id) {
-                category.done = true
-            }
+function setDoneItem(elem) {
+    elem.classList.add("done")
+
+    fetch('http://127.0.0.1:8000/setDone/',{
+        method: 'PUT',
+        body: JSON.stringify({
+            toDoID: `${elem.id}`
+        }),
+        headers: {
+            'Content-Type': 'application/json',
         }
-    }
-    pendingItems(toDos)
-}*/
+    })
+    .then(res => res.json())
+    .then(toDos => {
+        showToDo(toDos)
+    })
+    pendingItems()
+}
 
 async function getToDos() {
     const response = await fetch('http://127.0.0.1:8000/sendToDo')
-    const data = await response.json('/')
+    const data = await response.json()
     return data
 }
 
@@ -57,14 +64,14 @@ function showToDo(arr) {
         categoryList.classList.add("list")
         let categoryTitle = document.createElement("h3")
         categoryTitle.textContent = `${arr[i].category}`
-        let buttonMarkup = `<span class="editBtn" id="${arr[i].category}" onclick="editCategory(toDos,this)"><i class="fa fa-edit"></i></span>
-        <span class="trashBtn" style="color: var(--main-red);" id="${arr[i].category}" onclick="deleteCategory(toDos,this);"> <i class="fa fa-trash"></i></span>`
+        let buttonMarkup = `<span class="editBtn" id="${arr[i].category}" onclick="editCategory(this)"><i class="fa fa-edit"></i></span>
+        <span class="trashBtn" style="color: var(--main-red);" id="${arr[i].category}" onclick="deleteCategory(this);"> <i class="fa fa-trash"></i></span>`
         categoryList.appendChild(categoryTitle)
         categoryTitle.insertAdjacentHTML("afterend",buttonMarkup)
 
         for (const item in arr[i].toDoList) {
             const toDoItem = document.createElement("li")
-            toDoItem.setAttribute("ondblclick","setDoneItem(this,toDos);")
+            toDoItem.setAttribute("ondblclick","setDoneItem(this);")
             toDoItem.id = arr[i].toDoList[item].id
             toDoItem.textContent = `${arr[i].toDoList[item].name}`
             if (arr[i].toDoList[item].done == true) {
@@ -81,7 +88,7 @@ function showToDo(arr) {
 
             const trashBtn = document.createElement("span")
             trashBtn.classList.add("trashBtn")
-            trashBtn.setAttribute("onclick","deleteToDo(this,toDos);")
+            trashBtn.setAttribute("onclick","deleteToDo(this);")
             trashBtn.id = arr[i].toDoList[item].id
             const trashIcon = document.createElement("i")
             trashIcon.classList.add("fa", "fa-trash")
@@ -97,6 +104,7 @@ function showToDo(arr) {
         }
         list.appendChild(categoryList)
     } 
+    pendingItems()
 }
 
 function addToDo() {
@@ -115,7 +123,9 @@ function addToDo() {
         }
     })
     .then(res => res.json())
-    .then(toDos => showToDo(toDos))
+    .then(toDos => {
+        showToDo(toDos)
+    })
    
     inputField.value = ""
     inputField.setAttribute("placeholder","Enter new task")
@@ -193,61 +203,60 @@ function finishEdit() {
         showToDo(toDos)
     })
 }
-/*
-function deleteToDo(elem,arr) {
-    for (i = 0; i < arr.length; i++) {
-        for (const category of arr[i].toDoList) {
-            if (category.id == elem.id) {
-                arr[i].toDoList.splice(arr[i].toDoList.indexOf(category), 1)
-            }
+
+function deleteToDo(elem) {
+    fetch(`http://127.0.0.1:8000/deleteToDo/${elem.id}`,{
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
         }
-    }
-    showToDo(toDos)
+    })
+    .then(res => res.json())
+    .then(toDos => {
+        showToDo(toDos)
+    })
 }
 
-function clearDoneItems(arr) {
-    for (i = 0; i < arr.length; i++) {
-        // I looked on stackoverflow for how to reverse iterate an object. A normal loop was skipping indexes because it was removing an element and incrementing i at the same time https://stackoverflow.com/questions/60373450/why-splice-method-does-not-work-and-delete-item-on-array-in-typescript
-        j = arr[i].toDoList.length
-        while (j--) {
-            if (arr[i].toDoList[j].done == true) {
-                arr[i].toDoList.splice(arr[i].toDoList[j], 1)
-            }
-        } 
-    }
-    showToDo(toDos)
+async function deleteDoneToDos() {
+    const response = await fetch('http://127.0.0.1:8000/deleteDoneToDos')
+    const data = await response.json()
+    return data
 }
-*/
+
+function clearDoneItems() {
+    deleteDoneToDos().then(toDos => showToDo(toDos))
+}
+
 
 function addCategory() {
-    const addCategoryInput = document.querySelector(".newCategory").value
+    const addCategoryInput = document.querySelector(".newCategory")
     fetch('http://127.0.0.1:8000/addCategory',{
         method: 'POST',
-        body: JSON.stringify({category: `${addCategoryInput}`}),
+        body: JSON.stringify({category: `${addCategoryInput.value}`}),
         headers: {
             'Content-Type': 'application/json',
         }
     })
     .then(res => res.json())
     .then(toDos => showToDo(toDos))
-    /*arr.push({
-        category: `${addCategoryInput.value}`,
-        toDoList: []
-    })*/
     addCategoryInput.value = ""
     
 }
-/*
-function deleteCategory(arr,elem) {
-    for (i = 0; i < arr.length; i++) {
-        if (arr[i].category == elem.id) {
-            arr.splice(i, 1)
+
+function deleteCategory(elem) {
+    fetch(`http://127.0.0.1:8000/deleteCategory/${elem.id}`,{
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
         }
-    }
-    showToDo(toDos)
+    })
+    .then(res => res.json())
+    .then(toDos => {
+        showToDo(toDos)
+    })
 }
 
-function editCategory(arr,elem) {
+function editCategory(elem) {
     const wrapper = document.querySelector(".categoryField")
     const addInput = document.querySelector(".newCategory")
     const addBtn = document.querySelector(".addCategoryBtn")
@@ -259,43 +268,52 @@ function editCategory(arr,elem) {
     editCategoryInput.setAttribute("type","text")
     const editCategoryBtn = document.createElement("button")
     editCategoryBtn.setAttribute("type","button")
-    editCategoryBtn.setAttribute("onclick","finishCategoryEdit(toDos);")
+    editCategoryBtn.setAttribute("onclick","finishCategoryEdit();")
     editCategoryBtn.classList.add("editCategoryBtn")
     const icon = document.createElement("i")
     icon.classList.add("fas","fa-edit")
-    for (i = 0; i < arr.length; i++) {
-        if (arr[i].category == elem.id) {
-            editCategoryInput.setAttribute("placeholder",`${arr[i].category}`)
-        }
-    }
+
+    fetch(`http://127.0.0.1:8000/editCategory/${elem.id}`)
+    .then(res => res.json())
+    .then(data => {
+        editCategoryInput.setAttribute("placeholder",`${data}`)
+    })
+    
     editCategoryBtn.appendChild(icon)
     wrapper.appendChild(editCategoryInput)
     wrapper.appendChild(editCategoryBtn)
 }
 
-function finishCategoryEdit(arr) {
+function finishCategoryEdit() {
     const wrapper = document.querySelector(".categoryField")
     const newCategoryInput = document.querySelector(".editCategoryInput")
 
-    for (i = 0; i < arr.length; i ++) {
-        if (arr[i].category == newCategoryInput.placeholder) {
-            arr[i].category = newCategoryInput.value
-        } 
-    }
+    fetch('http://127.0.0.1:8000/editCategory/',{
+        method: 'PUT',
+        body: JSON.stringify({
+            placeholder: `${newCategoryInput.placeholder}`,
+            value: `${newCategoryInput.value}`
+        }),
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(res => res.json())
+    .then(toDos => {
+        const editCategoryBtn = document.querySelector(".editCategoryBtn")
+        newCategoryInput.remove();
+        editCategoryBtn.remove();
 
-    const editCategoryBtn = document.querySelector(".editCategoryBtn")
-    newCategoryInput.remove();
-    editCategoryBtn.remove();
-
-    let editCategoryMarkup = `
-    <input type="text" placeholder="Enter new category" class="newCategory"/>
-    <button type="button" onclick="addCategory(toDos);" class="addCategoryBtn"><i class="fas fa-plus"></i></button>
-  `
+        let editCategoryMarkup = `
+        <input type="text" placeholder="Enter new category" class="newCategory"/>
+        <button type="button" onclick="addCategory(toDos);" class="addCategoryBtn"><i class="fas fa-plus"></i></button>
+        `
     
-    wrapper.insertAdjacentHTML("afterbegin",editCategoryMarkup)
+        wrapper.insertAdjacentHTML("afterbegin",editCategoryMarkup)
 
-    showToDo(toDos)
-}*/
+        showToDo(toDos)
+    })
+}
 getToDos().then(toDos => {
     showToDo(toDos)
 })
